@@ -190,6 +190,7 @@ ffi('read_open_memory', [c_archive_p, c_void_p, c_size_t], c_int, check_int)
 
 ffi('read_next_header', [c_archive_p, POINTER(c_void_p)], c_int, check_int)
 ffi('read_next_header2', [c_archive_p, c_void_p], c_int, check_int)
+ffi('read_header_position', [c_archive_p], c_longlong)
 
 ffi('read_close', [c_archive_p], c_int, check_int)
 ffi('read_free', [c_archive_p], c_int, check_int)
