@@ -107,6 +107,9 @@ def ffi(name, argtypes, restype, errcheck=None):
 
 errno = ffi('errno', [c_archive_p], c_int)
 error_string = ffi('error_string', [c_archive_p], c_char_p)
+ffi('format_name', [c_archive_p], c_char_p)
+ffi('position_compressed', [c_archive_p], c_longlong)
+ffi('position_uncompressed', [c_archive_p], c_longlong)
 
 # archive_entry
 
@@ -150,6 +153,11 @@ ffi('entry_sparse_reset', [c_archive_entry_p], c_int)
 ffi('entry_sparse_next', [c_archive_entry_p, POINTER(c_longlong),
                           POINTER(c_longlong)], c_int)
 ffi('entry_sparse_add_entry', [c_archive_entry_p, c_longlong, c_longlong], None)
+
+ffi('entry_pax_kw_count', [c_archive_entry_p], c_int)
+ffi('entry_pax_kw_reset', [c_archive_entry_p], c_int)
+ffi('entry_pax_kw_next', [c_archive_entry_p, POINTER(c_char_p), POINTER(c_void_p), POINTER(c_longlong)], c_int)
+ffi('entry_pax_kw_add_entry', [c_archive_entry_p, c_char_p, c_void_p, c_longlong], c_int)
 
 ffi('entry_clear', [c_archive_entry_p], c_archive_entry_p)
 ffi('entry_free', [c_archive_entry_p], None)
@@ -250,6 +258,8 @@ ffi('write_open_filename_w', [c_archive_p, c_wchar_p], c_int, check_int)
 ffi('write_open_memory',
     [c_archive_p, c_void_p, c_size_t, POINTER(c_size_t)],
     c_int, check_int)
+
+ffi('write_set_options', [c_archive_p, c_char_p], c_int)
 
 ffi('write_get_bytes_in_last_block', [c_archive_p], c_int, check_int)
 ffi('write_get_bytes_per_block', [c_archive_p], c_int, check_int)

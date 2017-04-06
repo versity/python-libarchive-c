@@ -66,6 +66,7 @@ def get_entries(location):
                 'isdev': entry.isdev,
                 'uid': entry.uid,
                 'gid': entry.gid
+                'pax_headers': entry.pax_headers,
             }
 
 
@@ -101,6 +102,7 @@ def get_tarinfos(location):
                 'isdev': entry.isdev(),
                 'uid': entry.uid,
                 'gid': entry.gid
+                'pax_headers': entry.pax_headers,
             }
 
 

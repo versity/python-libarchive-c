@@ -1,7 +1,7 @@
 from __future__ import division, print_function, unicode_literals
 
 from contextlib import contextmanager
-from ctypes import c_char_p, create_string_buffer, c_longlong, byref
+from ctypes import cast, c_byte, c_char_p, c_void_p, c_long, c_longlong, pointer, byref, create_string_buffer
 
 from . import ffi
 
@@ -247,3 +247,44 @@ class ArchiveEntry(object):
         if self._sparse_map is None:
             self._sparse_map = SparseMap(self)
         return self._sparse_map
+
+    def pax_headers(self):
+        # TODO:
+        # setup cache so we only need to create the dict once
+        headers = {}
+        # reset back to beginning to walk
+        numh = ffi.entry_pax_kw_reset(self._entry_p)
+        print("num headers:", numh)
+
+        key = c_char_p()
+        value = c_void_p()
+        value_len = c_longlong()
+
+        # loop until we see ARCHIVE_WARN
+        while True:
+            if ffi.entry_pax_kw_next(self._entry_p, key, value, byref(value_len)) != ffi.ARCHIVE_OK:
+                break
+
+            # per PAX standard, keys are in utf-8
+            # XXX: libarchive uses url decode/encode, not utf-8 alone
+            key_str = key.value.decode('utf-8')
+            print("key: {0}".format(key_str))
+
+            # start with bytes, might translate to other formats...
+            print("value_len:", value_len.value)
+            val_bytes = bytearray((c_byte * value_len.value).from_address(value.value))
+            print("val_bytes:", val_bytes)
+            #val_bytes = bytearray(cast(value, c_char_p).value[:value_len.value])
+            try:
+                val_str = val_bytes.decode('utf-8', 'surrogateescape')
+            except UnicodeDecodeError:
+                print("binary data in {0}".format(key_str))
+                val_str = val_bytes
+            print("val_str:", val_str)
+
+            # use set default, as we are walking the attributes in reverse order and only need to
+            # see the last one set -- it overrides earlier ones.
+            headers.setdefault(key_str, val_str)
+
+        print("headers:", headers)
+        return headers
