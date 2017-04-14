@@ -1,7 +1,13 @@
 from __future__ import division, print_function, unicode_literals
 
 from contextlib import contextmanager
-from ctypes import cast, c_byte, c_char_p, c_void_p, c_long, c_longlong, pointer, byref, create_string_buffer
+from ctypes import (c_byte, c_char_p, c_void_p, c_longlong, byref,
+                    create_string_buffer)
+try:
+    from urllib import unquote
+except ImportError:
+    # py3
+    from urllib.parse import unquote
 
 from . import ffi
 
@@ -81,6 +87,41 @@ class SparseMap(list):
         ffi.entry_sparse_reset(entry_p)
 
         self.extend(entry_sparse_map(entry_p))
+
+
+def decode_pax_kw(key, value, value_len):
+    """ Decode the the key and with pax kw rules.
+
+        keys are always utf-8
+        values should be utf-8 but can be binary """
+    # per PAX standard, keys are in utf-8
+    # NOTE: libarchive uses url decode/encode, not utf-8 alone
+    key_str = unquote(key.value.decode('utf-8'))
+
+    val_bytes = bytearray((c_byte * value_len.value).from_address(value.value))
+    try:
+        val_str = val_bytes.decode('utf-8', 'surrogateescape')
+    except UnicodeDecodeError:
+        val_str = val_bytes
+
+    return (key_str, val_str)
+
+
+def entry_pax_kw(entry_p):
+    """ return the next pax KW as (key, value), formatted and parsed """
+    key = c_char_p()
+    value = c_void_p()
+    value_len = c_longlong()
+
+    # loop until we see ARCHIVE_WARN
+    while True:
+        len_p = byref(value_len)
+        if ffi.entry_pax_kw_next(entry_p, key, value, len_p) != ffi.ARCHIVE_OK:
+            raise StopIteration()
+
+        key_str, val_str = decode_pax_kw(key, value, value_len)
+
+        yield (key_str, val_str)
 
 
 class ArchiveEntry(object):
@@ -252,39 +293,14 @@ class ArchiveEntry(object):
         # TODO:
         # setup cache so we only need to create the dict once
         headers = {}
+
         # reset back to beginning to walk
-        numh = ffi.entry_pax_kw_reset(self._entry_p)
-        print("num headers:", numh)
+        ffi.entry_pax_kw_reset(self._entry_p)
 
-        key = c_char_p()
-        value = c_void_p()
-        value_len = c_longlong()
-
-        # loop until we see ARCHIVE_WARN
-        while True:
-            if ffi.entry_pax_kw_next(self._entry_p, key, value, byref(value_len)) != ffi.ARCHIVE_OK:
-                break
-
-            # per PAX standard, keys are in utf-8
-            # XXX: libarchive uses url decode/encode, not utf-8 alone
-            key_str = key.value.decode('utf-8')
-            print("key: {0}".format(key_str))
-
-            # start with bytes, might translate to other formats...
-            print("value_len:", value_len.value)
-            val_bytes = bytearray((c_byte * value_len.value).from_address(value.value))
-            print("val_bytes:", val_bytes)
-            #val_bytes = bytearray(cast(value, c_char_p).value[:value_len.value])
-            try:
-                val_str = val_bytes.decode('utf-8', 'surrogateescape')
-            except UnicodeDecodeError:
-                print("binary data in {0}".format(key_str))
-                val_str = val_bytes
-            print("val_str:", val_str)
-
-            # use set default, as we are walking the attributes in reverse order and only need to
-            # see the last one set -- it overrides earlier ones.
+        for key_str, val_str in entry_pax_kw(self._entry_p):
+            # use set default, as we are walking the attributes in reverse order
+            # and only need to see the last one set -- it overrides earlier
+            # ones.
             headers.setdefault(key_str, val_str)
 
-        print("headers:", headers)
         return headers

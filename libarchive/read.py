@@ -28,11 +28,6 @@ class ArchiveRead(object):
                     return
                 yield entry
 
-    #XXX generic to read/write
-    @property
-    def format_name(self):
-        return format_name(self._pointer)
-
 
 @contextmanager
 def new_archive_read(format_name='all', filter_name='all'):

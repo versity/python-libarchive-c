@@ -7,7 +7,6 @@ import json
 import locale
 from os import environ, stat
 from os.path import join
-import tarfile
 
 import pytest
 
@@ -53,6 +52,7 @@ def test_entry_properties():
             assert entry.pathname == entry.path
             assert entry.pathname == entry.name
 
+
 def test_entry_pax_properties():
     """ test properties specific to pax """
 
@@ -65,14 +65,16 @@ def test_entry_pax_properties():
         for entry in archive:
             assert entry.mode == stat('README.rst')[0]
 
-            # There might be selinux headers here, but that depends on the source FS configuration
-            # from where the code was checked out. We skip testing those, we'll test for header
-            # completeness in other tests
+            # There might be selinux headers here, but that depends on the
+            # source FS configuration from where the code was checked out. We
+            # skip testing those, we'll test for header completeness in other
+            # tests
             assert 'ctime' in entry.pax_headers
             assert 'atime' in entry.pax_headers
 
-#@pytest.mark.parametrize('name', ['testtar.tar', 'bsdtar_libarchive.tar',])
-@pytest.mark.parametrize('name', ['bsdtar_libarchive.tar',])
+
+# @pytest.mark.parametrize('name', ['testtar.tar', 'bsdtar_libarchive.tar',])
+@pytest.mark.parametrize('name', ['bsdtar_libarchive.tar', ])
 def test_pax_headers_against_TarInfo(name):
     path = join(data_dir, name)
     tarinfos = list(get_tarinfos(path))
@@ -82,8 +84,8 @@ def test_pax_headers_against_TarInfo(name):
 
     for tarinfo, entry in zip(tarinfos, entries):
         assert tarinfo['pax_headers'] == entry['pax_headers']
-        # after this file, we run into global pax headers which libarchive is not yet
-        # handling
+        # after this file, we run into global pax headers which libarchive is
+        # not yet handling
         if tarinfo['path'] == "pax/umlauts-ÄÖÜäöüß":
             break
 
@@ -185,7 +187,7 @@ def test_entry_sparse_manual(tmpdir, sparse_map):
 
 def test_check_ArchiveEntry_against_TarInfo():
     for name in ('special.tar', 'tar_relative.tar'):
-    #for name in ('special.tar', 'tar_relative.tar', 'bsdtar_libarchive.tar'):
+        # for name in ('special.tar', 'tar_relative.tar', 'bsdtar_libarchive.tar'):
         path = join(data_dir, name)
         tarinfos = list(get_tarinfos(path))
         entries = list(get_entries(path))
