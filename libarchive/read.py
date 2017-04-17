@@ -21,11 +21,11 @@ class ArchiveRead(object):
         archive_p = self._pointer
         read_next_header2 = ffi.read_next_header2
         with new_archive_entry() as entry_p:
-            entry = ArchiveEntry(archive_p, entry_p)
             while 1:
                 r = read_next_header2(archive_p, entry_p)
                 if r == ARCHIVE_EOF:
                     return
+                entry = ArchiveEntry(archive_p, entry_p)
                 yield entry
 
 

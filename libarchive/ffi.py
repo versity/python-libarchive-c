@@ -38,7 +38,6 @@ ARCHIVE_FATAL = -30   # No more operations are possible.
 REGULAR_FILE = 0o100000
 DEFAULT_UNIX_PERMISSION = 0o664
 
-
 # Callback types
 
 WRITE_CALLBACK = CFUNCTYPE(
@@ -158,7 +157,7 @@ ffi('entry_pax_kw_reset', [c_archive_entry_p], c_int)
 ffi('entry_pax_kw_next', [c_archive_entry_p, POINTER(c_char_p),
                           POINTER(c_void_p), POINTER(c_longlong)], c_int)
 ffi('entry_pax_kw_add_entry', [c_archive_entry_p, c_char_p, c_void_p,
-                               c_longlong], c_int)
+                               c_longlong], c_int, check_int)
 
 ffi('entry_clear', [c_archive_entry_p], c_archive_entry_p)
 ffi('entry_free', [c_archive_entry_p], None)

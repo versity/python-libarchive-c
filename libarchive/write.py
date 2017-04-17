@@ -10,7 +10,8 @@ from .ffi import (
     DEFAULT_UNIX_PERMISSION, ARCHIVE_EOF,
     page_size, entry_sourcepath, entry_clear, read_disk_new, read_disk_open_w,
     read_next_header2, read_disk_descend, read_free, write_header, write_data,
-    write_finish_entry, entry_set_size, entry_set_filetype, entry_set_perm
+    write_finish_entry, entry_set_size, entry_set_filetype, entry_set_perm,
+    write_set_options
 )
 
 
@@ -181,10 +182,13 @@ def file_writer(
 
 @contextmanager
 def memory_writer(
-        buf, format_name, filter_name=None, archive_write_class=ArchiveWrite
+        buf, format_name, filter_name=None, options=None, archive_write_class=ArchiveWrite
 ):
     with new_archive_write(format_name, filter_name) as archive_p:
         used = byref(c_size_t())
         buf_p = cast(buf, c_void_p)
+        if options:
+            for each in options:
+                write_set_options(archive_p, each)
         ffi.write_open_memory(archive_p, buf_p, len(buf), used)
         yield archive_write_class(archive_p)

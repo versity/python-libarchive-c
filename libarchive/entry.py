@@ -123,6 +123,50 @@ def entry_pax_kw(entry_p):
 
         yield (key_str, val_str)
 
+class PaxHeaders(dict):
+    """ Wrapper around dictionary API to get & set PAX KW headers into an ArchiveEntry """
+
+    def __init__(self, archive_entry, *args, **initial):
+        """ setup initial values """
+        if not isinstance(archive_entry, ArchiveEntry):
+            raise ValueError("archive_entry must be an instance of ArchiveEntry")
+
+        super(PaxHeaders, self).__init__(*args, **initial)
+
+        self._arch_e = archive_entry
+        self._update_from_entry()
+
+    def _update_from_entry(self):
+        """ find all of the kw headers in entry """
+        # TODO: - Do we need to have 'mode' for writable/readable here to avoid
+        # API confusion?  -- can't write headers to an entry we are using from a
+        # readable stream, etc
+
+        # reset back to beginning to walk
+        ffi.entry_pax_kw_reset(self._arch_e.entry_p)
+
+        for key_str, val_str in entry_pax_kw(self._arch_e.entry_p):
+            # use set default, as we are walking the attributes in reverse order
+            # and only need to see the last one set -- it overrides earlier
+            # ones.
+            self.setdefault(key_str, val_str)
+
+    def update(self, *args, **kwargs):
+        """ override update, as it does not call __setitem__ """
+        for k, v in dict(*args, **kwargs).items():
+            self.__setitem__(k, v)
+
+    def __setitem__(self, key, value):
+        """ set the pax KW headers for key=value """
+        if not isinstance(key, str):
+            raise ValueError("need string keys")
+
+        if not isinstance(value, (str, bytes)):
+            # libarchive will encode to utf-8 if needed
+            value = str(value)
+
+        ffi.entry_pax_kw_add_entry(self._arch_e.entry_p, key, value, len(value))
+        dict.__setitem__(self, key, value)
 
 class ArchiveEntry(object):
 
@@ -130,6 +174,7 @@ class ArchiveEntry(object):
         self._archive_p = archive_p
         self._entry_p = entry_p
         self._sparse_map = None
+        self._pax_headers = None
 
     def __str__(self):
         return self.pathname
@@ -137,6 +182,8 @@ class ArchiveEntry(object):
     @property
     def entry_p(self):
         """ return entry pointer to be used by archive entry API functions """
+        if not self._entry_p:
+            raise ValueError("attempt to use entry_p when not valid")
         return self._entry_p
 
     @property
@@ -290,17 +337,6 @@ class ArchiveEntry(object):
         return self._sparse_map
 
     def pax_headers(self):
-        # TODO:
-        # setup cache so we only need to create the dict once
-        headers = {}
-
-        # reset back to beginning to walk
-        ffi.entry_pax_kw_reset(self._entry_p)
-
-        for key_str, val_str in entry_pax_kw(self._entry_p):
-            # use set default, as we are walking the attributes in reverse order
-            # and only need to see the last one set -- it overrides earlier
-            # ones.
-            headers.setdefault(key_str, val_str)
-
-        return headers
+        if self._pax_headers is None:
+            self._pax_headers = PaxHeaders(self)
+        return self._pax_headers

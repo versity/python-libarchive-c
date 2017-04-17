@@ -6,6 +6,7 @@ import io
 import libarchive
 from libarchive.extract import EXTRACT_OWNER, EXTRACT_PERM, EXTRACT_TIME
 from libarchive.write import memory_writer
+from libarchive.entry import ArchiveEntry, new_archive_entry
 from mock import patch
 
 from . import check_archive, in_dir, treestat
@@ -146,3 +147,39 @@ def test_adding_entry_from_memory():
                 archive_entry.get_blocks()
             )
             assert archive_entry.path == entry_path
+
+def test_adding_pax_kw_headers():
+    entry_path = 'this is path'
+    entry_data = 'content'
+    entry_size = len(entry_data)
+    entry_headers = dict(somekey=u'somevalue', otherkey='othervalue', numberkey='12345',
+                         binarykey=b'\x12\x13\x14\x59')
+
+    buf = bytes(bytearray(1000000))
+
+    with new_archive_entry() as entry_p:
+        libarchive.ffi.entry_set_size(entry_p, entry_size)
+        libarchive.ffi.entry_set_filetype(entry_p, libarchive.ffi.REGULAR_FILE)
+        libarchive.ffi.entry_set_perm(entry_p, libarchive.ffi.DEFAULT_UNIX_PERMISSION)
+
+        archive_entry = ArchiveEntry(None, entry_p)
+        archive_entry.pathname = entry_path
+        archive_entry.pax_headers.update(entry_headers)
+
+        # Critical - need to turn on writing of PAX KW options for writ_header to enable
+        # that feature
+        options = ('pax:generic_kw',)
+
+        with libarchive.memory_writer(buf, 'pax', options=options) as archive:
+            # not using archive.add_entries, that assumes the entry comes from another
+            # archive and tries to use entry.get_blocks()
+            write_p = archive._pointer
+
+            libarchive.ffi.write_header(write_p, archive_entry._entry_p)
+            libarchive.ffi.write_data(write_p, entry_data, len(entry_data))
+            libarchive.ffi.write_finish_entry(write_p)
+
+    with libarchive.memory_reader(buf) as memory_archive:
+        for archive_entry in memory_archive:
+            assert archive_entry.path == entry_path
+            assert archive_entry.pax_headers == entry_headers
