@@ -141,7 +141,7 @@ def new_archive_write(format_name, filter_name=None):
 
 @contextmanager
 def custom_writer(
-        write_func, format_name, filter_name=None,
+        write_func, format_name, filter_name=None, options=None,
         open_func=VOID_CB, close_func=VOID_CB, block_size=page_size,
         archive_write_class=ArchiveWrite
 ):
@@ -157,6 +157,9 @@ def custom_writer(
     with new_archive_write(format_name, filter_name) as archive_p:
         ffi.write_set_bytes_in_last_block(archive_p, 1)
         ffi.write_set_bytes_per_block(archive_p, block_size)
+        if options:
+            for each in options:
+                write_set_options(archive_p, each)
         ffi.write_open(archive_p, None, open_cb, write_cb, close_cb)
         yield archive_write_class(archive_p)
 
