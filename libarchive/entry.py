@@ -32,6 +32,11 @@ class ArchiveEntry(object):
         return self.pathname
 
     @property
+    def entry_p(self):
+        """ return entry pointer to be used by archive entry API functions """
+        return self._entry_p
+
+    @property
     def filetype(self):
         return ffi.entry_filetype(self._entry_p)
 
