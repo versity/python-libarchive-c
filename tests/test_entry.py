@@ -8,7 +8,9 @@ import locale
 from os import environ, stat
 from os.path import join
 
-from libarchive import memory_reader, memory_writer
+import pytest
+
+from libarchive import memory_reader, memory_writer, file_reader
 
 from . import data_dir, get_entries, get_tarinfos
 
@@ -47,6 +49,18 @@ def test_entry_properties():
             assert b'rw' in entry.strmode
             assert entry.pathname == entry.path
             assert entry.pathname == entry.name
+
+
+@pytest.mark.parametrize('tar_file', ['testtar.tar', ])
+def test_entry_name_decoding(tar_file):
+    """ Test that the entry names are decoded to utf8 correctly """
+    path = join(data_dir, tar_file)
+
+    with file_reader(path) as arch:
+        for entry in arch:
+            # Use str find method to test it was converted from bytes to a
+            # str/unicode
+            entry.name.find('not there')
 
 
 def test_check_ArchiveEntry_against_TarInfo():
