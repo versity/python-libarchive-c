@@ -1,7 +1,7 @@
 from __future__ import division, print_function, unicode_literals
 
 from contextlib import contextmanager
-from ctypes import c_char_p, create_string_buffer
+from ctypes import c_char_p, create_string_buffer, c_longlong, byref
 
 from . import ffi
 
@@ -22,11 +22,73 @@ def format_time(seconds, nanos):
     return int(seconds)
 
 
+def entry_sparse_map(entry_p):
+    """ return the next sparse entry as (offset, length) """
+    offset = c_longlong()
+    length = c_longlong()
+
+    off_p = byref(offset)
+    len_p = byref(length)
+
+    # loop until we see ARCHIVE_WARN
+    while True:
+        if ffi.entry_sparse_next(entry_p, off_p, len_p) != ffi.ARCHIVE_OK:
+            raise StopIteration()
+
+        yield(offset.value, length.value)
+
+
+class SparseMap(list):
+    """ Sparse map handling for archive entries
+
+        The map is a ordered list of (offset, length) of data blocks
+    """
+
+    def __init__(self, archive_entry):
+        """ setup internal data """
+        super(SparseMap, self).__init__()
+        self._arch_e = archive_entry
+        self._update_from_entry()
+
+    def __setitem__(self, index, value):
+        """ Not supported: no replacing of existing data """
+        raise NotImplementedError()
+
+    def insert(self, index, value):
+        """ Not supported, inserting should be done with append or extend """
+        raise NotImplementedError()
+
+    def _add_map(self, offset, length):
+        """ Add a new sparse map entry """
+        ffi.entry_sparse_add_entry(self._arch_e.entry_p, offset, length)
+        super(SparseMap, self).append((offset, length))
+
+    def append(self, map_entry):
+        """ add new map entry """
+        (offset, length) = map_entry
+        self._add_map(offset, length)
+
+    def extend(self, iterable):
+        """ add all the map entries in iterable """
+        for (offset, length) in iterable:
+            self._add_map(offset, length)
+
+    def _update_from_entry(self):
+        """ populate a map from the archive entry """
+        entry_p = self._arch_e.entry_p
+
+        # make sure we start at the beginning
+        ffi.entry_sparse_reset(entry_p)
+
+        self.extend(entry_sparse_map(entry_p))
+
+
 class ArchiveEntry(object):
 
     def __init__(self, archive_p, entry_p):
         self._archive_p = archive_p
         self._entry_p = entry_p
+        self._sparse_map = None
 
     def __str__(self):
         return self.pathname
@@ -179,3 +241,9 @@ class ArchiveEntry(object):
     @property
     def rdevminor(self):
         return ffi.entry_rdevminor(self._entry_p)
+
+    @property
+    def sparse_map(self):
+        if self._sparse_map is None:
+            self._sparse_map = SparseMap(self)
+        return self._sparse_map

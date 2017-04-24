@@ -141,6 +141,13 @@ ffi('entry_set_ctime', [c_archive_entry_p, c_int, c_long], None)
 
 ffi('entry_update_pathname_utf8', [c_archive_entry_p, c_char_p], None)
 
+ffi('entry_sparse_clear', [c_archive_entry_p], None)
+ffi('entry_sparse_count', [c_archive_entry_p], c_int)
+ffi('entry_sparse_reset', [c_archive_entry_p], c_int)
+ffi('entry_sparse_next', [c_archive_entry_p, POINTER(c_longlong),
+                          POINTER(c_longlong)], c_int)
+ffi('entry_sparse_add_entry', [c_archive_entry_p, c_longlong, c_longlong], None)
+
 ffi('entry_clear', [c_archive_entry_p], c_archive_entry_p)
 ffi('entry_free', [c_archive_entry_p], None)
 

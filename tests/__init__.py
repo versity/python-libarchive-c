@@ -5,6 +5,7 @@ from copy import copy
 from os import chdir, getcwd, stat, walk
 from os.path import abspath, dirname, join
 from stat import S_ISREG
+from string import printable
 import tarfile
 
 from libarchive import file_reader
@@ -135,3 +136,29 @@ def surrogate_decode(o):
     if isinstance(o, bytes):
         return o.decode('utf8', errors='surrogateescape')
     return o
+
+
+def generate_contents(size):
+    """ return contents of a certain size """
+    base_contents = printable
+    num = int(size / len(base_contents))
+
+    contents = base_contents * (num + 1)
+    return contents[:size]
+
+
+def create_sparse_file(fname, data_map, size):
+    """ Create a sparse file at fname with size.
+
+        data map is a list of (offset,length) of data blocks to write
+    """
+    with open(fname, 'w') as testf:
+        pos = testf.tell()
+        testf.truncate(size)
+
+        for (offset, length) in data_map:
+            if offset != pos:
+                testf.seek(offset)
+            data = generate_contents(length)
+            testf.write(data)
+        testf.flush()
