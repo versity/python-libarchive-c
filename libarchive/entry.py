@@ -336,6 +336,7 @@ class ArchiveEntry(object):
             self._sparse_map = SparseMap(self)
         return self._sparse_map
 
+    @property
     def pax_headers(self):
         if self._pax_headers is None:
             self._pax_headers = PaxHeaders(self)
