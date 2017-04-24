@@ -114,8 +114,12 @@ class ArchiveEntry(object):
                                    timestamp_sec, timestamp_nsec)
 
     def _getpathname(self):
-        return (ffi.entry_pathname_w(self._entry_p) or
+        name = (ffi.entry_pathname_w(self._entry_p) or
                 ffi.entry_pathname(self._entry_p))
+        if isinstance(name, bytes):
+            return name.decode('utf8', 'surrogateescape')
+        else:
+            return name
 
     def _setpathname(self, value):
         if not isinstance(value, bytes):
