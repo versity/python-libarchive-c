@@ -12,12 +12,15 @@ cache:
 env:
   global:
     - LIBARCHIVE=/opt/python-libarchive-c/lib/libarchive.so
+  matrix:
+    - LIBARCHIVE_VERS=3.1.2
+    - LIBARCHIVE_VERS=3.3.1
 
 before_install:
   - sudo apt-get install -y zlib1g-dev liblzma-dev libbz2-dev libxml2-dev nettle-dev libattr1-dev libacl1-dev
   - "if [ ! -e $LIBARCHIVE ]; then
-        wget http://libarchive.org/downloads/libarchive-3.1.2.tar.gz &&
-        tar -xf libarchive-3.1.2.tar.gz && cd libarchive-3.1.2 &&
+        wget http://libarchive.org/downloads/libarchive-${LIBARCHIVE_VERS}.tar.gz &&
+        tar -xf libarchive-${LIBARCHIVE_VERS}.tar.gz && cd libarchive-${LIBARCHIVE_VERS} &&
         ./configure --prefix=/opt/python-libarchive-c --disable-bsdcpio --disable-bsdtar &&
         make && sudo make install && cd .. ;
     fi"
