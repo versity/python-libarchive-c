@@ -24,6 +24,20 @@ def new_archive_read_disk(path):
         read_free(archive_p)
 
 
+@contextmanager
+def new_archive_entry_from_path(path):
+    """ yield new archive entry, setup from path """
+    with new_archive_entry() as entry_p:
+        entry = ArchiveEntry(None, entry_p)
+        with new_archive_read_disk(path) as read_p:
+            hdr = read_next_header2(read_p, entry_p)
+            if hdr == ARCHIVE_EOF:
+                raise StopIteration()
+            entry.pathname = entry.pathname.lstrip('/')
+
+            yield entry
+
+
 class ArchiveWrite(object):
 
     def __init__(self, archive_p):
@@ -48,9 +62,9 @@ class ArchiveWrite(object):
         if block_size <= 0:
             block_size = 10240  # pragma: no cover
 
-        with new_archive_entry() as entry_p:
-            entry = ArchiveEntry(None, entry_p)
-            for path in paths:
+        for path in paths:
+            with new_archive_entry_from_path(path) as entry:
+                entry_p = entry.entry_p
                 with new_archive_read_disk(path) as read_p:
                     while 1:
                         r = read_next_header2(read_p, entry_p)
